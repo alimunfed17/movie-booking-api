@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
-from .models import Movie, Show
+from .models import *
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -42,7 +42,7 @@ class LoginSerializer(serializers.Serializer):
 class MovieSerializer(serializers.ModelSerializer):
     class Meta:
         model = Movie
-        fields = ["title", "duration_minutes"]
+        fields = ["title", "duration_minutes", "id"]
 
 class ShowSerializer(serializers.ModelSerializer):
     movie_title = serializers.CharField(source="movie.title")
@@ -54,3 +54,9 @@ class ShowSerializer(serializers.ModelSerializer):
 
     def get_date_time(self, obj):
         return obj.date_time.strftime("%Y-%m-%d %I:%M%p")
+    
+class BookingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Booking
+        fields = "__all__"
+        read_only_fields = ["user", "status", "created_at"]

@@ -8,5 +8,8 @@ urlpatterns = [
 
     # Movies & Shows
     path("movies/", MoviesView.as_view(), name="movies"),
-    path("movies/<int:movie_id>/shows/", ShowsView.as_view(), name="shows")
+    path("movies/<int:movie_id>/shows/", ShowsView.as_view(), name="shows"),
+
+    # Bookings
+    path("shows/<int:show_id>/book/", BookShowView.as_view(), name="booking"),
 ]
