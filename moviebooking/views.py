@@ -20,3 +20,12 @@ class MoviesView(generics.ListAPIView):
     queryset = Movie.objects.all()
     serializer_class = MovieSerializer
     permission_classes = [AllowAny]
+
+class ShowsView(generics.ListAPIView):
+    serializer_class = ShowSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        movie_id = self.kwargs.get("movie_id")
+        movie = Movie.objects.get(id=movie_id)
+        return movie.shows.all()
