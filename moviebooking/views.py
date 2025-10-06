@@ -2,6 +2,7 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
+from rest_framework.exceptions import ValidationError, NotFound
 from .serializers import *
 
 class SignupView(generics.CreateAPIView):
@@ -38,35 +39,45 @@ class BookShowView(APIView):
         seat_number = request.data.get("seat_number")
 
         if not seat_number:
-            return Response({"detail": "Seat number is required"}, status=status.HTTP_400_BAD_REQUEST)
+            raise ValidationError("Seat number is required")
         
         try:
             seat_number = int(seat_number)
         except ValueError:
-            return Response({"detail": "Seat number must be an integer"}, status=status.HTTP_400_BAD_REQUEST)
+            return ValidationError("Seat number must be an integer")
         
-        try:
-            show = Show.objects.get(pk=show_id)
-        except Show.DoesNotExist:
-            return Response({"detail": "Show not found"}, status=status.HTTP_404_NOT_FOUND)
-        
-        if seat_number < 1 or seat_number > show.total_seats:
-            return Response(
-                {"detail": "Invalid seat number"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        if Booking.objects.filter(show=show, seat_number=seat_number, status="booked").exists():
-            return Response({"detail": "Seat already booked"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        booking = Booking.objects.create(
-            user=request.user,
-            show=show,
-            seat_number=seat_number,
-            status="booked"
-        )
-        serializer = BookingSerializer(booking)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                with transaction.atomic():
+                    try:
+                        show = Show.objects.select_for_update().get(pk=show_id)
+                    except Show.DoesNotExist:
+                        return NotFound("Show not found")
+                    
+                    if seat_number < 1 or seat_number > show.total_seats:
+                        return ValidationError("Invalid seat number")
+                    
+                    if show.booking.filter(seat_number=seat_number, status="booked").exists():
+                        return ValidationError("Seat already booked")
+                    
+                    booking = Booking.objects.create(
+                        user=request.user,
+                        show=show,
+                        seat_number=seat_number,
+                        status="booked"
+                    )
+
+                    serializer = BookingSerializer(booking)
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+            except ValidationError:
+                raise
+            except Exception:
+                if attempt < max_retries - 1:
+                    continue
+                else:
+                    raise ValidationError("Could not complete booking. Please try again.")
+        raise ValidationError("Booking failed after multiple attempts")
 
 class CancelShowView(APIView):
     permission_classes = [IsAuthenticated]
