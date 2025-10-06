@@ -12,4 +12,6 @@ urlpatterns = [
 
     # Bookings
     path("shows/<int:show_id>/book/", BookShowView.as_view(), name="booking"),
+    path("bookings/<int:show_id>/cancel", CancelShowView.as_view(), name="cancel"),
+
 ]

@@ -3,9 +3,6 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from .serializers import *
-import logging
-
-logger = logging.getLogger(__name__)
 
 class SignupView(generics.CreateAPIView):
     serializer_class = SignupSerializer
@@ -54,6 +51,26 @@ class BookShowView(APIView):
             status="booked"
         )
         serializer = BookingSerializer(booking)
-        logger.info(f"User: {request.user}, show_id: {show_id}, data: {request.data}")
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+class CancelShowView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, show_id):
+        seat_number = request.data.get("seat_number")
+        if not seat_number:
+            return Response({"detail": "Seat number is required"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            booking = Booking.objects.get(
+                show_id=show_id,
+                seat_number=seat_number,
+                user=request.user,
+                status="booked"
+            )
+        except Booking.DoesNotExist:
+            return Response({'detail': 'Booking not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        booking.status = 'cancelled'
+        booking.save()
+        serializer = BookingSerializer(booking)
+        return Response(serializer.data, status=status.HTTP_200_OK)
