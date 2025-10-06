@@ -36,10 +36,25 @@ class BookShowView(APIView):
 
     def post(self, request, show_id):
         seat_number = request.data.get("seat_number")
+
+        if not seat_number:
+            return Response({"detail": "Seat number is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            seat_number = int(seat_number)
+        except ValueError:
+            return Response({"detail": "Seat number must be an integer"}, status=status.HTTP_400_BAD_REQUEST)
+        
         try:
             show = Show.objects.get(pk=show_id)
         except Show.DoesNotExist:
             return Response({"detail": "Show not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        if seat_number < 1 or seat_number > show.total_seats:
+            return Response(
+                {"detail": "Invalid seat number"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         if Booking.objects.filter(show=show, seat_number=seat_number, status="booked").exists():
             return Response({"detail": "Seat already booked"}, status=status.HTTP_400_BAD_REQUEST)
