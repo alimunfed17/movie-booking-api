@@ -12,6 +12,6 @@ urlpatterns = [
 
     # Bookings
     path("shows/<int:show_id>/book/", BookShowView.as_view(), name="booking"),
-    path("bookings/<int:show_id>/cancel", CancelShowView.as_view(), name="cancel"),
-
+    path("bookings/<int:show_id>/cancel/", CancelShowView.as_view(), name="cancel"),
+    path("my-bookings/", MyBookingsView.as_view(), name="my-bookings"),
 ]

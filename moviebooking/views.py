@@ -74,3 +74,10 @@ class CancelShowView(APIView):
         booking.save()
         serializer = BookingSerializer(booking)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+class MyBookingsView(generics.ListAPIView):
+    serializer_class = BookingSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Booking.objects.filter(user=self.request.user)
